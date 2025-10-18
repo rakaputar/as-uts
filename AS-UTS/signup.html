@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign Up - Perpustakaan</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header><h1>Daftar Akun (Demo)</h1></header>
+  <div class="container">
+    <div class="auth-card">
+      <h2>Buat Akun Baru</h2>
+      <form id="signup" class="form-field">
+        <input id="nama" placeholder="Nama (opsional)" />
+        <input id="email" placeholder="Email" type="email" required />
+        <select id="role">
+          <option value="mahasiswa">Mahasiswa</option>
+          <option value="dosen">Dosen</option>
+          <option value="tendik">Tendik</option>
+        </select>
+        <input id="password" placeholder="Password" type="password" required />
+        <div style="display:flex;gap:8px"><button type="submit" class="btn-primary">Daftar</button><a href="/login.html"><button type="button" class="btn-ghost">Kembali</button></a></div>
+      </form>
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+  <script>
+    document.getElementById('signup').onsubmit = async function(e){
+      e.preventDefault();
+      const nama = document.getElementById('nama').value;
+      const email = document.getElementById('email').value;
+      const role = document.getElementById('role').value;
+      const password = document.getElementById('password').value;
+      const res = await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nama,email,role,password})});
+      const data = await res.json();
+      if(res.ok){
+        document.getElementById('msg').innerText = 'Berhasil daftar. Silakan login.';
+        setTimeout(()=>window.location.href='/login.html',800);
+        return;
+      }
+      else { document.getElementById('msg').innerText = data.error || 'Gagal daftar'; }
+    }
+  </script>
+</body>
+</html>

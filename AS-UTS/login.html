@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login - Perpustakaan</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header><h1>Perpustakaan Digital</h1></header>
+  <div class="container">
+    <div class="auth-card">
+      <h2>Masuk ke Akun Anda</h2>
+      <p class="muted-small">Gunakan email dan password yang sudah terdaftar. Jika belum punya akun, daftar terlebih dahulu.</p>
+      <form id="loginForm" class="form-field">
+        <input id="email" placeholder="Email" type="email" required />
+        <input id="password" placeholder="Password" type="password" required />
+        <div style="display:flex;gap:8px;align-items:center">
+            <button id="login-btn" class="btn-primary">Login dengan SSO</button>
+          <a href="/signup.html"><button type="button" class="btn-ghost">Daftar</button></a>
+        </div>
+          <div id="sso-msg" class="muted-small center" style="margin-top:8px"></div>
+      </form>
+      <div id="msg" class="msg"></div>
+      <hr />
+      <p class="muted-small center">Atau akses dashboard publik (demo)</p>
+      <div class="center"><a href="/AS-uts.html"><button class="btn-ghost">Kembali ke Dashboard</button></a></div>
+    </div>
+  </div>
+  <script>
+    function choose(role){
+      // Simpel: kirimkan pilihan lewat query param ke AS-uts
+      window.location.href = '/AS-uts.html?demoRole=' + encodeURIComponent(role);
+    }
+    document.getElementById('loginForm').onsubmit = async function(e){
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      const data = await res.json();
+      if(res.ok){
+        // simpan demo token di localStorage sehingga persist antar halaman
+        const demo = { token: data.token, tokenParsed: { preferred_username: data.preferred_username, realm_access: data.realm_access } };
+        localStorage.setItem('demoAuth', JSON.stringify(demo));
+        window._demoAuth = demo;
+        const role = (data.realm_access && data.realm_access.roles && data.realm_access.roles[0]) || null;
+        if(role) window.location.href = '/' + role + '.html'; else window.location.href = '/AS-uts.html';
+      } else {
+        document.getElementById('msg').innerText = data.error || 'Login gagal';
+      }
+
+        // Cek status Keycloak pada load
+        (async function(){
+          try{
+            const res = await fetch('/auth/keycloak/status');
+            const info = await res.json();
+            const btn = document.getElementById('login-btn');
+            const msg = document.getElementById('sso-msg');
+            if(info.testMode || !info.available){
+              btn.disabled = true;
+              msg.innerText = info.message || ('SSO tidak tersedia: ' + (info.error || 'down'));
+            } else {
+              btn.onclick = function(){ window.location.href = '/auth/keycloak'; };
+              msg.innerText = 'SSO tersedia - masuk dengan akun institusi Anda';
+            }
+          }catch(e){ console.warn('SSO status check failed', e); }
+        })();
+    }
+  </script>
+</body>
+</html>

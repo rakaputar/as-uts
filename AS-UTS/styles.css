@@ -1,0 +1,103 @@
+:root{
+	--bg:#f6f8fb;
+	--card:#ffffff;
+	--muted:#6b7280;
+	--text:#0f1724;
+	--primary:#2563eb;
+	--primary-600:#1e4fd6;
+	--accent:#4b6cb7;
+	--glass: rgba(255,255,255,0.6);
+	--radius:12px;
+}
+
+/* Reset + base */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+	font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	background: linear-gradient(180deg, var(--bg), #ffffff);
+	color:var(--text);
+	margin:0;
+	-webkit-font-smoothing:antialiased;
+}
+
+/* Header */
+header{
+	background: white;
+	border-bottom: 1px solid rgba(15,23,36,0.04);
+	padding:18px 20px;
+	display:flex;
+	align-items:center;
+	justify-content:space-between;
+}
+header h1{margin:0;font-size:1.1rem;letter-spacing:0.2px}
+header .nav{display:flex;gap:10px;align-items:center}
+header .nav a{color:var(--muted);text-decoration:none;font-size:0.95rem}
+
+/* Page container */
+.container{max-width:980px;margin:28px auto;padding:20px}
+
+/* Cards */
+.card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 6px 22px rgba(12,20,40,0.06);}
+
+/* Controls and forms */
+.controls{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+input[type="text"], input[type="number"], input[type="email"], input[type="password"], select{
+	padding:10px 12px;border:1px solid rgba(15,23,36,0.06);border-radius:10px;background:linear-gradient(180deg,#fff,#fbfdff);
+	width:100%;transition:box-shadow .15s ease,transform .06s ease;border-radius:10px;font-size:0.96rem;color:var(--text)
+}
+input:focus,select:focus{outline:none;box-shadow:0 4px 14px rgba(37,99,235,0.08);border-color:var(--primary-600)}
+
+.form-field{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+
+/* Auth card specific */
+.auth-card{max-width:420px;margin:28px auto;padding:22px;border-radius:14px;background:linear-gradient(180deg,var(--card),#fbfdff);box-shadow:0 10px 30px rgba(11,22,50,0.06)}
+.auth-card h2{margin:0 0 6px 0;font-size:1.15rem}
+.muted-small{color:var(--muted);font-size:0.95rem}
+
+/* Buttons */
+.btn-primary{background:var(--primary);color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer;transition:transform .06s ease,box-shadow .12s ease}
+.btn-primary:hover{background:var(--primary-600);transform:translateY(-1px);box-shadow:0 6px 18px rgba(37,99,235,0.12)}
+.btn-ghost{background:transparent;border:1px solid rgba(15,23,36,0.06);color:var(--text);padding:9px 12px;border-radius:10px;cursor:pointer}
+.btn-ghost:hover{background:rgba(15,23,36,0.02)}
+
+.center{text-align:center}
+.muted{color:var(--muted)}
+
+/* Messages and loading */
+.msg{margin-top:8px;color:var(--primary-600);font-weight:600}
+.loading{display:inline-block;padding:6px 10px;background:rgba(15,23,36,0.04);border-radius:8px}
+
+/* Table */
+table{width:100%;border-collapse:collapse;margin-top:12px;background:transparent}
+th,td{padding:12px 14px;border-bottom:1px solid rgba(15,23,36,0.04);text-align:left}
+thead th{background:transparent;color:var(--muted);font-weight:600}
+tbody tr:nth-child(even){background:rgba(15,23,36,0.01)}
+
+/* Small helpers */
+.role-links a{margin-right:8px}
+.controls .search{flex:1}
+
+/* Responsive tweaks */
+@media (max-width:640px){
+	.container{padding:14px}
+	.auth-card{margin:18px 12px}
+	header{padding:12px}
+}
+
+/* Animations and role cards */
+.fade-in{animation:fadeIn .5s ease both}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+.role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.role-card{background:linear-gradient(180deg,rgba(37,99,235,0.06),rgba(75,108,183,0.03));padding:14px;border-radius:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.role-card:hover{transform:translateY(-6px);box-shadow:0 12px 30px rgba(37,99,235,0.08)}
+.role-card .icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:white;box-shadow:0 6px 14px rgba(11,22,50,0.04)}
+.role-card h4{margin:0;font-size:0.98rem}
+.role-card p{margin:0;color:var(--muted);font-size:0.88rem}
+
+.search {display:flex;gap:8px;align-items:center}
+.search input{flex:1}
+.search .search-icon{width:40px;height:40px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white}
+
+

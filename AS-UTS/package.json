@@ -1,0 +1,18 @@
+{
+  "name": "as-uts",
+  "version": "1.0.0",
+  "description": "Perpustakaan digital - backend sederhana untuk UTS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "SET TEST_MODE=true && node server.js",
+    "dev:ps": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:TEST_MODE='true'; node server.js\"",
+    "start:local": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.7"
+  }
+}

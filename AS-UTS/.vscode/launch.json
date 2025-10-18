@@ -1,0 +1,32 @@
+{
+  // Konfigurasi debug: jalankan server dengan TEST_MODE=true dan buka browser ke AS-uts.html
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Server (TEST_MODE)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/server.js",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "TEST_MODE": "true",
+        "BIND_HOST": "127.0.0.1"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Open Browser (AS-uts.html)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3001/AS-uts.html",
+      "webRoot": "${workspaceFolder}"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Server + Browser",
+      "configurations": ["Debug Server (TEST_MODE)", "Open Browser (AS-uts.html)"]
+    }
+  ]
+}
