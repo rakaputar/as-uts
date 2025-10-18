@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin - Perpustakaan</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header><h1>Admin - Perpustakaan</h1></header>
+  <div class="container">
+    <h3>Manajemen Buku</h3>
+    <form id="form-tambah-buku">
+      <input type="text" id="judul" placeholder="Judul" required />
+      <input type="text" id="penulis" placeholder="Penulis" required />
+      <input type="number" id="tahun" placeholder="Tahun" required />
+      <input type="number" id="stok" placeholder="Stok" required />
+      <button type="submit">Tambah Buku</button>
+    </form>
+    <div id="loading" class="hidden">Loading...</div>
+    <hr />
+    <input id="search" placeholder="Cari buku..." /> <button id="btn-search">Cari</button>
+    <div id="daftar"></div>
+  </div>
+  <script>
+    (function(){
+      try{ const stored = localStorage.getItem('demoAuth'); if(stored){ window._demoAuth = JSON.parse(stored); } }
+      catch(e){}
+      if(!(window._demoAuth && window._demoAuth.token) && !(typeof keycloak !== 'undefined' && keycloak && keycloak.token)){
+        window.location.href = '/login.html';
+      }
+    })();
+    async function getAuthHeader(){
+      if(window._demoAuth && window._demoAuth.token) return {'Authorization':'Bearer '+window._demoAuth.token};
+      if(typeof keycloak!== 'undefined' && keycloak && keycloak.token) return {'Authorization':'Bearer '+keycloak.token};
+      return {};
+    }
+    async function fetchBuku(q=''){
+      let url='/api/buku'; if(q) url+='?search='+encodeURIComponent(q);
+      const res=await fetch(url,{headers:await getAuthHeader()}); return await res.json();
+    }
+    function render(rows){
+      if(!rows||!rows.length) return document.getElementById('daftar').innerHTML='<p>Tidak ada buku</p>';
+      let html='<table border=1 cellpadding=6><tr><th>Judul</th><th>Penulis</th><th>Tahun</th><th>Stok</th></tr>';
+      rows.forEach(r=>{html+=`<tr><td>${r.judul}</td><td>${r.penulis}</td><td>${r.tahun}</td><td>${r.stok}</td></tr>`});
+      html+='</table>'; document.getElementById('daftar').innerHTML=html;
+    }
+    document.getElementById('btn-search').onclick=async()=>{const q=document.getElementById('search').value; const buku=await fetchBuku(q); render(buku);}
+    document.getElementById('form-tambah-buku').onsubmit=async function(e){
+      e.preventDefault(); if(!confirm('Tambah buku baru?')) return;
+      try{document.getElementById('loading').classList.remove('hidden');
+        const judul=document.getElementById('judul').value; const penulis=document.getElementById('penulis').value; const tahun=Number(document.getElementById('tahun').value); const stok=Number(document.getElementById('stok').value);
+        const res=await fetch('/api/buku',{method:'POST',headers:{'Content-Type':'application/json',...(await getAuthHeader())},body:JSON.stringify({judul,penulis,tahun,stok})});
+        if(res.ok){alert('Buku berhasil ditambah'); const buku=await fetchBuku(); render(buku); this.reset();} else {const e=await res.json(); alert(e.error||'Gagal');}
+      }catch(err){alert('Terjadi kesalahan: '+err.message);}finally{document.getElementById('loading').classList.add('hidden')}
+    }
+    (async()=>{try{const me=await (await fetch('/api/me')).json(); window._demoAuth={token:me.token, tokenParsed:{preferred_username:me.preferred_username, realm_access:me.realm_access}};}catch(e){} const buku=await fetchBuku(); render(buku);})();
+  </script>
+</body>
+</html>

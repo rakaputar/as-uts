@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perpustakaan Digital</title>
+    <script src="https://cdn.jsdelivr.net/npm/keycloak-js@23.0.0/dist/keycloak.min.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Perpustakaan Digital</h1>
+        <div id="user-info"></div>
+        <button id="logout-btn" class="hidden">Logout</button>
+    </header>
+    <div class="container">
+        <div id="login-section" class="card auth-card center">
+            <h2>Selamat datang di Perpustakaan Digital</h2>
+            <p class="muted-small">Cari, pinjam, dan kembalikan buku dengan mudah. Login untuk mulai.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                <button id="login-btn" class="btn-primary">Login dengan SSO</button>
+                <a href="/login.html"><button id="demo-login" class="btn-ghost">Login / Daftar</button></a>
+            </div>
+            <div id="sso-msg" class="muted-small center" style="margin-top:8px"></div>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <section class="card" style="display:flex;align-items:center;gap:18px;margin-bottom:18px">
+                <div style="flex:1">
+                    <h2 id="hero-title" style="margin:0">Perpustakaan Digital</h2>
+                    <p class="muted-small" id="hero-sub">Akses koleksi buku kapan saja, di mana saja.</p>
+                    <div class="controls" style="margin-top:12px">
+                        <input id="search" class="search" type="text" placeholder="Cari judul atau penulis..." />
+                        <button id="btn-search" class="btn-primary">Cari</button>
+                    </div>
+                </div>
+                <div style="width:260px">
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div class="card" style="padding:12px;text-align:center;background:linear-gradient(90deg,#2563eb22,#4b6cb722);border-radius:10px">
+                            <strong id="user-welcome">--</strong>
+                            <div class="muted-small">Status login</div>
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <a href="/mahasiswa.html" class="btn-ghost" style="flex:1;text-align:center;padding:10px 0">Mahasiswa</a>
+                            <a href="/dosen.html" class="btn-ghost" style="flex:1;text-align:center;padding:10px 0">Dosen</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="role-section" class="card" style="margin-bottom:18px">
+                <!-- Role info injected here -->
+            </section>
+
+            <section id="content-section">
+                <!-- Content (list buku, actions) injected here -->
+            </section>
+        </div>
+    </div>
+    <script>
+        // Jika server dijalankan dalam TEST_MODE, frontend akan melakukan auto-login
+        async function initAuth() {
+            try {
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                            const me = await res.json();
+                    // Simulasikan objek keycloak sederhana untuk keperluan UI
+                    window._demoAuth = {
+                        token: me.token || 'TEST-TOKEN',
+                        tokenParsed: {
+                            preferred_username: me.preferred_username,
+                            realm_access: me.realm_access
+                        }
+                    };
+                                    // Jika demo role dipilih via query param, gunakan itu
+                                    const params = new URLSearchParams(window.location.search);
+                                    const demoRole = params.get('demoRole');
+                                    if (demoRole) {
+                                        // Set demo tokenParsed sesuai role yang dipilih
+                                        window._demoAuth.tokenParsed.realm_access = { roles: [demoRole === 'admin' ? 'admin' : demoRole] };
+                                        window.location.href = `/${demoRole}.html`;
+                                        return;
+                                    }
+                                    // Jika demo mode tanpa demoRole, gunakan roles dari /api/me
+                                    const roles = (window._demoAuth.tokenParsed.realm_access && window._demoAuth.tokenParsed.realm_access.roles) || [];
+                                    const target = getRoleTarget(roles);
+                                    if (target) { window.location.href = `/${target}.html`; return; }
+                                    onLoginDemo(window._demoAuth);
+                    return;
+                }
+            } catch (e) {
+                // ignore, fallback ke Keycloak
+            }
+
+            // Cek status Keycloak dari server dulu
+            (async function(){
+                try{
+                    const st = await fetch('/auth/keycloak/status');
+                    const info = await st.json();
+                    const ssoBtn = document.getElementById('login-btn');
+                    const ssoMsg = document.getElementById('sso-msg');
+                    if(info.testMode || !info.available){
+                        ssoBtn.disabled = true;
+                        ssoMsg.innerText = info.message || ('SSO tidak tersedia: ' + (info.error || 'down'));
+                        // Jika TEST_MODE aktif, panggil demo init agar auto-login tetap berjalan
+                        if(info.testMode){
+                            // panggil API /api/me untuk auto-login demo
+                            try{ const meRes = await fetch('/api/me'); if(meRes.ok){ const me = await meRes.json(); window._demoAuth = { token: me.token, tokenParsed: { preferred_username: me.preferred_username, realm_access: me.realm_access } }; onLoginDemo(window._demoAuth); return; } }catch(e){}
+                        }
+                    } else {
+                        ssoBtn.onclick = function(){ window.location.href = '/auth/keycloak'; };
+                        ssoMsg.innerText = 'SSO tersedia - klik untuk login dengan institusi Anda';
+                    }
+                }catch(e){ console.warn('Tidak bisa mengecek status SSO', e); }
+            })();
+
+            // logout tombol: clear demoAuth and reload
+            document.getElementById('logout-btn').onclick = function(){
+                localStorage.removeItem('demoAuth');
+                window._demoAuth = null;
+                location.reload();
+            };
+        }
+
+        function onLoginDemo(demoAuth) {
+            // Gunakan struktur yang sama dengan onLogin tapi dari demoAuth
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('user-info').innerText = `Halo, ${demoAuth.tokenParsed.preferred_username} (${demoAuth.tokenParsed.realm_access.roles.join(', ')})`;
+            showRoleDashboard(demoAuth.tokenParsed.realm_access.roles);
+        }
+
+        // panggil initAuth saat load
+        initAuth();
+
+        // update small UI bits ketika demoAuth tersedia
+        (function updateSmallUI(){
+            try{ const stored = localStorage.getItem('demoAuth'); if(stored){ const d = JSON.parse(stored); window._demoAuth = d; const name = (d.tokenParsed && d.tokenParsed.preferred_username) || 'Pengguna'; document.getElementById('user-welcome') && (document.getElementById('user-welcome').innerText = name); } }catch(e){}
+        })();
+
+        function onLogin() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('user-info').innerText = `Halo, ${keycloak.tokenParsed.preferred_username} (${keycloak.tokenParsed.realm_access.roles.join(', ')})`;
+            showRoleDashboard(keycloak.tokenParsed.realm_access.roles);
+        }
+
+        function showRoleDashboard(roles) {
+            // Render role cards and action area
+            const roleLabels = [];
+            if (roles.includes('admin')) roleLabels.push('Admin');
+            if (roles.includes('dosen')) roleLabels.push('Dosen');
+            if (roles.includes('tendik')) roleLabels.push('Tendik');
+            if (roles.includes('mahasiswa')) roleLabels.push('Mahasiswa');
+
+            // Role cards
+            let cardsHtml = '<div class="role-grid fade-in">';
+            roleLabels.forEach(r => {
+                const icon = r === 'Admin' ? '⚙️' : (r === 'Dosen' ? '👩‍🏫' : (r === 'Tendik' ? '🧑‍💼' : '🎓'));
+                cardsHtml += `
+                    <div class="role-card" onclick="window.location.href='/${r.toLowerCase()}.html'">
+                        <div class="icon">${icon}</div>
+                        <h4>${r}</h4>
+                        <p>Akses halaman khusus untuk ${r}</p>
+                    </div>
+                `;
+            });
+            cardsHtml += '</div>';
+
+            document.getElementById('role-section').innerHTML = `<div class="card"><h3>Peran Anda</h3>${cardsHtml}</div>`;
+
+            // Show content area (list buku) below
+            document.getElementById('content-section').innerHTML = '<div class="card fade-in"><div id="daftar-buku"></div></div>';
+            // default role for setupFrontend is first role or mahasiswa
+            const defaultRole = roleLabels.length ? roleLabels[0] : 'Mahasiswa';
+            setupFrontend(defaultRole);
+        }
+
+        function getRoleTarget(roles) {
+            if (!roles || !roles.length) return null;
+            if (roles.includes('admin')) return 'dosen'; // admin biasanya akses manajemen (arah ke dosen page)
+            if (roles.includes('dosen')) return 'dosen';
+            if (roles.includes('tendik')) return 'tendik';
+            if (roles.includes('mahasiswa')) return 'mahasiswa';
+            return null;
+        }
+
+            async function setupFrontend(role) {
+            // Fungsi search buku
+            document.getElementById('btn-search').onclick = async function() {
+                const search = document.getElementById('search').value;
+                const buku = await fetchBuku(search);
+                renderBuku(buku, role);
+            };
+            // Tampilkan semua buku awal
+            const buku = await fetchBuku();
+            renderBuku(buku, role);
+            // Tambah buku (admin)
+            if (role === 'Admin') {
+                document.getElementById('form-tambah-buku').onsubmit = async function(e) {
+                    e.preventDefault();
+                    const judul = document.getElementById('judul').value;
+                    const penulis = document.getElementById('penulis').value;
+                    const tahun = document.getElementById('tahun').value;
+                    const stok = document.getElementById('stok').value;
+                    await fetch('/api/buku', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...getAuthHeader()
+                        },
+                        body: JSON.stringify({ judul, penulis, tahun, stok })
+                    });
+                    const buku = await fetchBuku();
+                    renderBuku(buku, role);
+                    this.reset();
+                };
+            }
+        }
+
+        async function fetchBuku(search = '') {
+            let url = '/api/buku';
+            if (search) url += `?search=${encodeURIComponent(search)}`;
+            const res = await fetch(url, {
+                headers: getAuthHeader()
+            });
+            return await res.json();
+        }
+
+        // Helper untuk mengambil header Authorization yang aman
+        function getAuthHeader() {
+            // Jika demoAuth ada (TEST_MODE), gunakan token demo
+            if (window._demoAuth && window._demoAuth.token) {
+                return { 'Authorization': 'Bearer ' + window._demoAuth.token };
+            }
+            // Jika keycloak tersedia, gunakan tokennya
+            if (typeof keycloak !== 'undefined' && keycloak && keycloak.token) {
+                return { 'Authorization': 'Bearer ' + keycloak.token };
+            }
+            return {};
+        }
+
+        function renderBuku(buku, role) {
+            let html = '<table border="1" cellpadding="4"><tr><th>Judul</th><th>Penulis</th><th>Tahun</th><th>Stok</th><th>Aksi</th></tr>';
+            buku.forEach(b => {
+                html += `<tr>
+                    <td>${b.judul}</td>
+                    <td>${b.penulis}</td>
+                    <td>${b.tahun}</td>
+                    <td>${b.stok}</td>
+                    <td>`;
+                if (role !== 'Admin') {
+                    html += `<button onclick="pinjamBuku(${b.id})" ${b.stok < 1 ? 'disabled' : ''}>Pinjam</button>`;
+                }
+                html += `</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('daftar-buku').innerHTML = html;
+            if (role !== 'Admin') {
+                renderPeminjaman();
+            }
+        }
+
+        async function renderPeminjaman() {
+            // Ambil daftar peminjaman user
+            const res = await fetch('/api/peminjaman-user', {
+                headers: getAuthHeader()
+            });
+            const data = await res.json();
+            let html = '<h3>Daftar Peminjaman Anda</h3>';
+            html += '<table border="1" cellpadding="4"><tr><th>Judul</th><th>Status</th><th>Aksi</th></tr>';
+            data.forEach(p => {
+                html += `<tr>
+                    <td>${p.judul}</td>
+                    <td>${p.status}</td>
+                    <td>`;
+                if (p.status === 'dipinjam') {
+                    html += `<button onclick="kembalikanBuku(${p.id})">Kembalikan</button>`;
+                }
+                html += `</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('daftar-buku').insertAdjacentHTML('afterend', html);
+        }
+
+        window.pinjamBuku = async function(buku_id) {
+            const res = await fetch('/api/peminjaman', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ buku_id })
+            });
+            if (res.ok) {
+                alert('Buku berhasil dipinjam!');
+                const buku = await fetchBuku();
+                renderBuku(buku, 'Mahasiswa');
+            } else {
+                const err = await res.json();
+                alert(err.error);
+            }
+        }
+
+        window.kembalikanBuku = async function(peminjaman_id) {
+            const res = await fetch('/api/pengembalian', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ peminjaman_id })
+            });
+            if (res.ok) {
+                alert('Buku berhasil dikembalikan!');
+                const buku = await fetchBuku();
+                renderBuku(buku, 'Mahasiswa');
+            } else {
+                const err = await res.json();
+                alert(err.error);
+            }
+        }
+    </script>
+</body>
+</html>

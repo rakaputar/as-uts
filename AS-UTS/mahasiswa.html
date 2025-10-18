@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mahasiswa - Perpustakaan</title>
+  <style>body{font-family:Arial,Helvetica,sans-serif;padding:1rem;background:#f7f7f7}header{background:#2c3e50;color:#fff;padding:1rem;text-align:center} .container{max-width:800px;margin:1rem auto;background:#fff;padding:1rem;border-radius:6px}</style>
+</head>
+<body>
+  <link rel="stylesheet" href="/styles.css">
+  <header><h1>Mahasiswa - Perpustakaan</h1></header>
+  <div class="container">
+    <div>
+      <input id="search" placeholder="Cari buku..." /> <button id="btn-search">Cari</button>
+    </div>
+  <div id="daftar"></div>
+  <div id="loading" class="hidden">Loading...</div>
+    <h3>Daftar Peminjaman</h3>
+    <div id="peminjaman"></div>
+  </div>
+  <script>
+    // Auth guard: jika tidak ada demoAuth di localStorage dan tidak ada keycloak, arahkan ke login
+    (function(){
+      try{ const stored = localStorage.getItem('demoAuth'); if(stored){ window._demoAuth = JSON.parse(stored); } }
+      catch(e){}
+      if(!(window._demoAuth && window._demoAuth.token) && !(typeof keycloak !== 'undefined' && keycloak && keycloak.token)){
+        window.location.href = '/login.html';
+      }
+    })();
+    async function getAuthHeader(){
+      if(window._demoAuth && window._demoAuth.token) return {'Authorization':'Bearer '+window._demoAuth.token};
+      if(typeof keycloak!== 'undefined' && keycloak && keycloak.token) return {'Authorization':'Bearer '+keycloak.token};
+      return {};
+    }
+    async function fetchBuku(q=''){
+      let url='/api/buku'; if(q) url+='?search='+encodeURIComponent(q);
+      const res=await fetch(url,{headers:await getAuthHeader()}); return await res.json();
+    }
+    function render(rows){
+      if(!rows||!rows.length) return document.getElementById('daftar').innerHTML='<p>Tidak ada buku</p>';
+      let html='<table border=1 cellpadding=6><tr><th>Judul</th><th>Penulis</th><th>Tahun</th><th>Stok</th><th>Aksi</th></tr>';
+      rows.forEach(r=>{html+=`<tr><td>${r.judul}</td><td>${r.penulis}</td><td>${r.tahun}</td><td>${r.stok}</td><td><button onclick="pinjam(${r.id})" ${r.stok<1?'disabled':''}>Pinjam</button></td></tr>`});
+      html+='</table>'; document.getElementById('daftar').innerHTML=html;
+      loadPeminjaman();
+    }
+    async function pinjam(id){
+      if(!confirm('Konfirmasi: pinjam buku ini?')) return;
+      const btn = event && event.target ? event.target : null;
+      try{
+        document.getElementById('loading').classList.remove('hidden');
+        if(btn) btn.disabled = true;
+        const res=await fetch('/api/peminjaman',{method:'POST',headers:{'Content-Type':'application/json',...(await getAuthHeader())},body:JSON.stringify({buku_id:id})});
+        if(res.ok){alert('Berhasil meminjam'); await loadPeminjaman(); const buku=await fetchBuku(document.getElementById('search').value); render(buku);} else {const e=await res.json(); alert(e.error||'Gagal');}
+      }catch(err){alert('Terjadi kesalahan: '+err.message);}finally{document.getElementById('loading').classList.add('hidden'); if(btn) btn.disabled=false}
+    }
+    async function loadPeminjaman(){
+      const res=await fetch('/api/peminjaman-user',{headers:await getAuthHeader()}); if(!res.ok) return; const data=await res.json();
+      if(!data||!data.length) return document.getElementById('peminjaman').innerHTML='<p>Belum ada peminjaman</p>';
+      let html='<table border=1 cellpadding=6><tr><th>Judul</th><th>Status</th><th>Aksi</th></tr>';
+      data.forEach(d=>{html+=`<tr><td>${d.judul}</td><td>${d.status}</td><td>${d.status==='dipinjam'?`<button onclick="kembali(${d.id})">Kembalikan</button>`:''}</td></tr>`});
+      html+='</table>'; document.getElementById('peminjaman').innerHTML=html;
+    }
+    async function kembali(id){
+      if(!confirm('Konfirmasi: kembalikan buku ini?')) return;
+      try{
+        document.getElementById('loading').classList.remove('hidden');
+        const res=await fetch('/api/pengembalian',{method:'POST',headers:{'Content-Type':'application/json',...(await getAuthHeader())},body:JSON.stringify({peminjaman_id:id})});
+        if(res.ok){alert('Berhasil dikembalikan'); await loadPeminjaman(); const buku=await fetchBuku(document.getElementById('search').value); render(buku);} else {const e=await res.json(); alert(e.error||'Gagal');}
+      }catch(err){alert('Terjadi kesalahan: '+err.message);}finally{document.getElementById('loading').classList.add('hidden')}
+    }
+    document.getElementById('btn-search').onclick=async()=>{const q=document.getElementById('search').value; const buku=await fetchBuku(q); render(buku);}
+    // init: jika demo auth belum ada, coba panggil /api/me untuk set demo
+    (async()=>{try{const me=await (await fetch('/api/me')).json(); window._demoAuth={token:me.token, tokenParsed:{preferred_username:me.preferred_username, realm_access:me.realm_access}};}catch(e){} const buku=await fetchBuku(); render(buku);})();
+  </script>
+</body>
+</html>
